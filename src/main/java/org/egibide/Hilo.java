@@ -1,31 +1,44 @@
 package org.egibide;
 
 import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
+import java.security.*;
 
 public class Hilo extends Thread {
-    private SSLServerSocket servidorSSL;
+    private final SSLSocket clienteConectado;
+    private final PublicKey clavepub;
+    private final PrivateKey clavepriv;
 
-    public Hilo(SSLServerSocket servidorSSL) {
-        this.servidorSSL = servidorSSL;
+    public Hilo(SSLSocket clienteConectado, PublicKey clavepub, PrivateKey clavepriv) {
+        this.clienteConectado = clienteConectado;
+        this.clavepub = clavepub;
+        this.clavepriv = clavepriv;
     }
 
     @Override
     public void run() {
-        SSLSocket clienteConectado = null;
         try {
-            clienteConectado = (SSLSocket) servidorSSL.accept();
             ObjectOutputStream salida = new ObjectOutputStream(clienteConectado.getOutputStream());
             ObjectInputStream entrada = new ObjectInputStream(clienteConectado.getInputStream());
 
-            byte[] mensaje = null;
-            mensaje = (byte[]) entrada.readObject();
-            SecretKey claveSecreta = (SecretKey) entrada.readObject();
-            System.out.println("Nueva incidencia: " + descifrarTexto(mensaje, claveSecreta));
+            salida.writeObject(clavepub);
+            PublicKey claveEmpleado = (PublicKey) entrada.readObject();
 
+            byte[] descripcion = (byte[]) entrada.readObject();
+            byte[] lugar = (byte[]) entrada.readObject();
+            byte[] nombre = (byte[]) entrada.readObject();
+
+            byte[] firma = (byte[]) entrada.readObject();
+
+            String sNombre = descifrar(nombre, clavepriv);
+            if (comprobarFirma(claveEmpleado, sNombre, firma)) {
+                String sDescripcion = descifrar(descripcion, clavepriv);
+                String sLugar = descifrar(lugar, clavepriv);
+                System.out.println("Nueva incidencia: " + sDescripcion + ". Localizacion: " + sLugar + ". Reportado por: " + sNombre);
+            }
+
+            // Cerrar conexión
             clienteConectado.close();
             salida.close();
             entrada.close();
@@ -36,10 +49,28 @@ public class Hilo extends Thread {
 
     }
 
-    public static String descifrarTexto(byte[] textoCifrado, SecretKey claveSecreta) throws Exception {
-        Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.DECRYPT_MODE, claveSecreta);
-        byte[] textoDecifrado = cipher.doFinal(textoCifrado);
-        return new String(textoDecifrado);
+    public static byte[] cifrar(String mensaje, PrivateKey clavepriv) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, clavepriv);
+        return cipher.doFinal(mensaje.getBytes());
+    }
+
+    public static String descifrar(byte[] mensaje, PrivateKey clavepriv) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, clavepriv);
+        byte[] mensajeDescifrado = cipher.doFinal(mensaje);
+        return new String(mensajeDescifrado);
+    }
+
+    public static boolean comprobarFirma(PublicKey clavePublica, String mensaje, byte[] firma) throws Exception {
+        Signature verificada = Signature.getInstance("SHA1withRSA");
+        verificada.initVerify(clavePublica);
+        verificada.update(mensaje.getBytes());
+        boolean check = verificada.verify(firma);
+
+        if (!check) {
+            System.out.println("Se ha bloqueado una incidencia de una firma no verificada");
+        }
+        return check;
     }
 }
