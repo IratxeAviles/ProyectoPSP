@@ -1,12 +1,16 @@
 package org.egibide;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.security.*;
 
 public class Empleado {
+    // FALTA EL LOGIN
     public static void main(String[] args) {
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
@@ -39,17 +43,12 @@ public class Empleado {
             String lugar = br.readLine();
             System.out.print("Escriba su nombre: ");
             String nombre = br.readLine();
+            Incidencia incidencia = new Incidencia(descripcion, lugar, nombre);
 
             // ---- Enviar incidencia -----
-            byte[] descripcionCifrado = cifrar(descripcion, claveServidor);
-            salida.writeObject(descripcionCifrado);
-
-            byte[] lugarCifrado = cifrar(lugar, claveServidor);
-            salida.writeObject(lugarCifrado);
-
-            byte[] nombreCifrado = cifrar(nombre, claveServidor);
-            byte[] firma = firmarIncidencia(nombre, clavepriv);
-            salida.writeObject(nombreCifrado);
+            byte[] incidenciaCifrada = cifrar(incidencia, claveServidor);
+            byte[] firma = firmarIncidencia(incidencia, clavepriv);
+            salida.writeObject(incidenciaCifrada);
             salida.writeObject(firma);
 
             System.out.println("Incidencia enviada");
@@ -63,16 +62,44 @@ public class Empleado {
         }
     }
 
-    public static byte[] cifrar(String mensaje, PublicKey claveServidor) throws Exception {
-        Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.ENCRYPT_MODE, claveServidor);
-        return cipher.doFinal(mensaje.getBytes());
+    public static byte[] cifrar(Incidencia incidencia, PublicKey claveServidor) throws RuntimeException {
+        Cipher cipher = null;
+        try {
+            cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, claveServidor);
+            return cipher.doFinal(serializeObject(incidencia));
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException |
+                 BadPaddingException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return null;
     }
 
-    public static byte[] firmarIncidencia(String nombre, PrivateKey clavepriv) throws Exception {
-        Signature dsa = Signature.getInstance("SHA1withRSA");
-        dsa.initSign(clavepriv);
-        dsa.update(nombre.getBytes());
-        return dsa.sign();
+    public static byte[] firmarIncidencia(Incidencia incidencia, PrivateKey clavepriv) {
+        Signature dsa = null;
+        try {
+            dsa = Signature.getInstance("SHA1withRSA");
+            dsa.initSign(clavepriv);
+            dsa.update(serializeObject(incidencia));
+            return dsa.sign();
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // Metodo de la solucion del ejercicio 8 UDP
+    public static byte[] serializeObject(Object obj) {
+        java.io.ByteArrayOutputStream byteStream = new java.io.ByteArrayOutputStream();
+
+        ObjectOutputStream objectStream = null;
+        try {
+            objectStream = new ObjectOutputStream(byteStream);
+            objectStream.writeObject(obj);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return byteStream.toByteArray();
     }
 }

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.security.*;
 
 public class Sistema {
+    // guardar incidencias aqui mediante un metodo que usen los hilos y ponerles codigo
     public static void main(String[] args) {
         int puerto = 6565;
         System.setProperty("javax.net.ssl.keyStore", "src/main/java/org/egibide/Certificado/CertificadoSSL.jks");
