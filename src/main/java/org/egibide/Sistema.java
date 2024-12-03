@@ -1,7 +1,5 @@
 package org.egibide;
 
-import org.egibide.Certificado.Hilo;
-
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import java.io.IOException;
