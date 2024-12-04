@@ -7,13 +7,13 @@ import java.security.*;
 import java.util.Random;
 
 public class Hilo extends Thread {
-    private final SSLSocket clienteConectado;
+    private final SSLSocket empleadoConectado;
     private final PublicKey clavepub;
     private final PrivateKey clavepriv;
     private BBDD bbdd;
 
-    public Hilo(SSLSocket clienteConectado, PublicKey clavepub, PrivateKey clavepriv, BBDD bbdd) {
-        this.clienteConectado = clienteConectado;
+    public Hilo(SSLSocket empleadoConectado, PublicKey clavepub, PrivateKey clavepriv, BBDD bbdd) {
+        this.empleadoConectado = empleadoConectado;
         this.clavepub = clavepub;
         this.clavepriv = clavepriv;
         this.bbdd = bbdd;
@@ -22,45 +22,48 @@ public class Hilo extends Thread {
     @Override
     public void run() {
         try {
-            ObjectOutputStream salida = new ObjectOutputStream(clienteConectado.getOutputStream());
-            ObjectInputStream entrada = new ObjectInputStream(clienteConectado.getInputStream());
+            ObjectOutputStream salida = new ObjectOutputStream(empleadoConectado.getOutputStream());
+            ObjectInputStream entrada = new ObjectInputStream(empleadoConectado.getInputStream());
 
+            // Se pasa la clave publica del servidor y se recibe la del empleado para empezar la conversacion cifrada
             salida.writeObject(clavepub);
             PublicKey claveEmpleado = (PublicKey) entrada.readObject();
 
+            // Se recibe la incidencia cifrada junto con la firma digital
             byte[] incidenciaCifrada = (byte[]) entrada.readObject();
             byte[] firma = (byte[]) entrada.readObject();
 
+            // Primero se descifra la incidencia para poder comprobar la firma digital, si es válida continúa el código, sino no se guarda la incidencia
             Incidencia incidencia = descifrar(incidenciaCifrada, clavepriv);
             if (comprobarFirma(claveEmpleado, incidencia, firma)) {
                 System.out.println(incidencia);
 
                 Random random = new Random();
-                switch (random.nextInt(3)) {
+                switch (random.nextInt(3)) { // Random del 0 al 2 para poder elegir entre prioridad Leve / Moderada / Urgente y responder al empleado según el caso
                     case 0:
-                        incidencia.setPrioridad(Prioridad.Leve);
+                        incidencia.setPrioridad(Prioridad.Leve); // Se guarda la prioridad en la incidencia
                         salida.writeObject(cifrar("Incidencia leve recibida. Se tardará en responder en un máximo de 1 semana", claveEmpleado));
+                        bbdd.guardarIncidencia(incidencia); // Se usa el metodo de la clase BBDD para guardar la incidencia en una lista y saber que codigo le tocara
                         break;
                     case 1:
                         incidencia.setPrioridad(Prioridad.Moderada);
                         salida.writeObject(cifrar("Incidencia moderada recibida. Se tardará en responder en un máximo de 2 días laborales", claveEmpleado));
+                        bbdd.guardarIncidencia(incidencia);
                         break;
                     case 2:
                         incidencia.setPrioridad(Prioridad.Urgente);
                         salida.writeObject(cifrar("Incidencia urgente recibida. Se tardará en responder en un máximo de 2 horas", claveEmpleado));
+                        bbdd.guardarIncidencia(incidencia);
                         break;
                     default:
                         break;
                 }
-
-                bbdd.guardarIncidencia(incidencia);
-
             } else {
                 salida.writeObject(cifrar("Incidencia cancelada. La incidencia está vacía o la firma no es válida", claveEmpleado));
             }
 
             // Cerrar conexión
-            clienteConectado.close();
+            empleadoConectado.close();
             salida.close();
             entrada.close();
 

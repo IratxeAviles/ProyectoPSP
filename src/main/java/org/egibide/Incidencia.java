@@ -2,7 +2,7 @@ package org.egibide;
 
 import java.io.Serializable;
 
-public class Incidencia implements Serializable {
+public class Incidencia implements Serializable { // Clase serializable para poder pasarla a bytes
     private int codigo;
     private String descripcion;
     private String lugar;
@@ -57,10 +57,6 @@ public class Incidencia implements Serializable {
 
     @Override
     public String toString() {
-        return "Incidencia{" +
-                "descripcion='" + descripcion + '\'' +
-                ", lugar='" + lugar + '\'' +
-                ", empleado='" + empleado + '\'' +
-                '}';
+        return "Nueva Incidencia: " +  descripcion + " En: " + lugar + ". Informada por: " + empleado;
     }
 }
