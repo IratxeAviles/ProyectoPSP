@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.security.*;
 
 public class Sistema {
-    // guardar incidencias aqui mediante un metodo que usen los hilos y ponerles codigo
     public static void main(String[] args) {
+        BBDD bbdd = new BBDD();
         int puerto = 6565;
         System.setProperty("javax.net.ssl.keyStore", "src/main/java/org/egibide/Certificado/CertificadoSSL.jks");
         System.setProperty("javax.net.ssl.keyStorePassword", "12345Abcde");
@@ -29,12 +29,11 @@ public class Sistema {
             while (true) {
                 try {
                     clienteConectado = (SSLSocket) servidorSSL.accept();
-                    Hilo empleado = new Hilo(clienteConectado, clavepub, clavepriv);
+                    Hilo empleado = new Hilo(clienteConectado, clavepub, clavepriv, bbdd);
                     empleado.start();
                 } catch (IOException e) {
                     System.out.println("Error al conectar el empleado");
                 }
-
             }
         } catch (IOException e) {
             System.out.println("Error al crear el servidor");

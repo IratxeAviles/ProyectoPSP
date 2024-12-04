@@ -51,8 +51,9 @@ public class Empleado {
             salida.writeObject(incidenciaCifrada);
             salida.writeObject(firma);
 
-            System.out.println("Incidencia enviada");
+            byte[] respuesta = (byte[]) entrada.readObject();
 
+            System.out.println("Respuesta del sistema: " + descifrar(respuesta, clavepriv));
             // Desconectar
             entrada.close();
             salida.close();
@@ -73,6 +74,13 @@ public class Empleado {
             System.out.println("Error: " + e.getMessage());
         }
         return null;
+    }
+
+    public static String descifrar(byte[] incidencia, PrivateKey clavepriv) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, clavepriv);
+        byte[] incidenciaDescifrada = cipher.doFinal(incidencia);
+        return new String(incidenciaDescifrada);
     }
 
     public static byte[] firmarIncidencia(Incidencia incidencia, PrivateKey clavepriv) {

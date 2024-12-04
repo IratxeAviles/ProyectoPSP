@@ -3,7 +3,7 @@ package org.egibide;
 import java.io.Serializable;
 
 public class Incidencia implements Serializable {
-    private int id;
+    private int codigo;
     private String descripcion;
     private String lugar;
     private String empleado;
@@ -15,12 +15,12 @@ public class Incidencia implements Serializable {
         this.empleado = empleado;
     }
 
-    public int getId() {
-        return id;
+    public int getCodigo() {
+        return codigo;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public void setCodigo(int codigo) {
+        this.codigo = codigo;
     }
 
     public String getDescripcion() {

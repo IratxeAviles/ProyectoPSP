@@ -4,17 +4,19 @@ import javax.crypto.Cipher;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
 import java.security.*;
+import java.util.Random;
 
 public class Hilo extends Thread {
-    // Hacer un random para elegir que prioridad dar a cada incidencia y pasarla al usuario
     private final SSLSocket clienteConectado;
     private final PublicKey clavepub;
     private final PrivateKey clavepriv;
+    private BBDD bbdd;
 
-    public Hilo(SSLSocket clienteConectado, PublicKey clavepub, PrivateKey clavepriv) {
+    public Hilo(SSLSocket clienteConectado, PublicKey clavepub, PrivateKey clavepriv, BBDD bbdd) {
         this.clienteConectado = clienteConectado;
         this.clavepub = clavepub;
         this.clavepriv = clavepriv;
+        this.bbdd = bbdd;
     }
 
     @Override
@@ -32,6 +34,29 @@ public class Hilo extends Thread {
             Incidencia incidencia = descifrar(incidenciaCifrada, clavepriv);
             if (comprobarFirma(claveEmpleado, incidencia, firma)) {
                 System.out.println(incidencia);
+
+                Random random = new Random();
+                switch (random.nextInt(3)) {
+                    case 0:
+                        incidencia.setPrioridad(Prioridad.Leve);
+                        salida.writeObject(cifrar("Incidencia leve recibida. Se tardará en responder en un máximo de 1 semana", claveEmpleado));
+                        break;
+                    case 1:
+                        incidencia.setPrioridad(Prioridad.Moderada);
+                        salida.writeObject(cifrar("Incidencia moderada recibida. Se tardará en responder en un máximo de 2 días laborales", claveEmpleado));
+                        break;
+                    case 2:
+                        incidencia.setPrioridad(Prioridad.Urgente);
+                        salida.writeObject(cifrar("Incidencia urgente recibida. Se tardará en responder en un máximo de 2 horas", claveEmpleado));
+                        break;
+                    default:
+                        break;
+                }
+
+                bbdd.guardarIncidencia(incidencia);
+
+            } else {
+                salida.writeObject(cifrar("Incidencia cancelada. La incidencia está vacía o la firma no es válida", claveEmpleado));
             }
 
             // Cerrar conexión
@@ -45,9 +70,9 @@ public class Hilo extends Thread {
 
     }
 
-    public static byte[] cifrar(String mensaje, PrivateKey clavepriv) throws Exception {
+    public static byte[] cifrar(String mensaje, PublicKey claveEmpleado) throws Exception {
         Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.ENCRYPT_MODE, clavepriv);
+        cipher.init(Cipher.ENCRYPT_MODE, claveEmpleado);
         return cipher.doFinal(mensaje.getBytes());
     }
 
@@ -70,7 +95,7 @@ public class Hilo extends Thread {
         return check;
     }
 
-    // Metodo de la solucion del ejercicio 8 UDP
+    // Metodo cogido de la solucion del ejercicio 8 UDP de Eider
     public static byte[] serializeObject(Object obj) {
         java.io.ByteArrayOutputStream byteStream = new java.io.ByteArrayOutputStream();
 
@@ -85,7 +110,7 @@ public class Hilo extends Thread {
         return byteStream.toByteArray();
     }
 
-    // Metodo de la solución del ejercicio 8 UDP
+    // Metodo cogido de la solución del ejercicio 8 UDP de Eider
     public static Object deserializeObject(byte[] data) throws Exception {
         java.io.ByteArrayInputStream byteStream = new java.io.ByteArrayInputStream(data);
         java.io.ObjectInputStream objectStream = new java.io.ObjectInputStream(byteStream);
