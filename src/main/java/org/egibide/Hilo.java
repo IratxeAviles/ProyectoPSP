@@ -1,6 +1,6 @@
 package org.egibide;
 
-import javax.crypto.Cipher;
+import javax.crypto.*;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
 import java.security.*;
@@ -28,6 +28,39 @@ public class Hilo extends Thread {
             // Se pasa la clave publica del servidor y se recibe la del empleado para empezar la conversacion cifrada
             salida.writeObject(clavepub);
             PublicKey claveEmpleado = (PublicKey) entrada.readObject();
+            SecretKey claveSecreta = (SecretKey) entrada.readObject();
+
+            int opcion = 0;
+            boolean login = false;
+
+            do {
+                opcion = (int) entrada.readObject();
+                switch (opcion) {
+                    case 1:
+                        byte[] usuarioCifrado = (byte[]) entrada.readObject();
+                        Usuario usuario = descifrarUsuario(usuarioCifrado, claveSecreta);
+                        bbdd.guardarUsuario(usuario);
+                        login = true;
+                        break;
+                    case 2:
+                        byte[] usuarioBytes = (byte[]) entrada.readObject();
+                        Usuario usuarioLogin = descifrarUsuario(usuarioBytes, claveSecreta);
+                        if (bbdd.comprobarLogin(usuarioLogin)) {
+                            System.out.println("Usuario " + usuarioLogin.getNombre() + " logueado correctamente");
+                            salida.writeObject(true);
+                        } else {
+                            System.out.println("Login incorrecto");
+                            salida.writeObject(false);
+                        }
+                        login = true;
+                        break;
+                    case 3:
+                        salida.writeObject("¡Adios!");
+                        break;
+                    default:
+                        break;
+                }
+            } while (login || opcion != 3);
 
             // Se recibe la incidencia cifrada junto con la firma digital
             byte[] incidenciaCifrada = (byte[]) entrada.readObject();
@@ -73,29 +106,64 @@ public class Hilo extends Thread {
 
     }
 
-    public static byte[] cifrar(String mensaje, PublicKey claveEmpleado) throws Exception {
-        Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.ENCRYPT_MODE, claveEmpleado);
-        return cipher.doFinal(mensaje.getBytes());
-    }
-
-    public static Incidencia descifrar(byte[] incidencia, PrivateKey clavepriv) throws Exception {
-        Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.DECRYPT_MODE, clavepriv);
-        byte[] incidenciaDescifrada = cipher.doFinal(incidencia);
-        return (Incidencia) deserializeObject(incidenciaDescifrada);
-    }
-
-    public static boolean comprobarFirma(PublicKey clavePublica, Incidencia incidencia, byte[] firma) throws Exception {
-        Signature verificada = Signature.getInstance("SHA1withRSA");
-        verificada.initVerify(clavePublica);
-        verificada.update(serializeObject(incidencia));
-        boolean check = verificada.verify(firma);
-
-        if (!check) {
-            System.out.println("Se ha bloqueado una incidencia de una firma no verificada");
+    public static byte[] cifrar(String mensaje, PublicKey claveEmpleado) {
+        Cipher cipher = null;
+        try {
+            cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, claveEmpleado);
+            return cipher.doFinal(mensaje.getBytes());
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException |
+                 BadPaddingException e) {
+            System.out.println("Error: " + e.getMessage());
         }
-        return check;
+        return null;
+    }
+
+    public static Incidencia descifrar(byte[] incidencia, PrivateKey clavepriv) {
+        Cipher cipher = null;
+        try {
+            cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, clavepriv);
+            byte[] incidenciaDescifrada = cipher.doFinal(incidencia);
+            return (Incidencia) deserializeObject(incidenciaDescifrada);
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("Error: " + e.getMessage());
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+
+    }
+
+    public static Usuario descifrarUsuario(byte[] usuario, SecretKey claveSecreta) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.DECRYPT_MODE, claveSecreta);
+            byte[] usuarioDescifrado = cipher.doFinal(usuario);
+            return (Usuario) deserializeObject(usuarioDescifrado);
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static boolean comprobarFirma(PublicKey clavePublica, Incidencia incidencia, byte[] firma) {
+        Signature verificada = null;
+        try {
+            verificada = Signature.getInstance("SHA1withRSA");
+
+            verificada.initVerify(clavePublica);
+            verificada.update(serializeObject(incidencia));
+            boolean check = verificada.verify(firma);
+
+            if (!check) {
+                System.out.println("Se ha bloqueado una incidencia de una firma no verificada");
+            }
+            return check;
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return false;
     }
 
     // Metodo cogido de la solucion del ejercicio 8 UDP de Eider
@@ -114,9 +182,15 @@ public class Hilo extends Thread {
     }
 
     // Metodo cogido de la solución del ejercicio 8 UDP de Eider
-    public static Object deserializeObject(byte[] data) throws Exception {
+    public static Object deserializeObject(byte[] data) {
         java.io.ByteArrayInputStream byteStream = new java.io.ByteArrayInputStream(data);
-        java.io.ObjectInputStream objectStream = new java.io.ObjectInputStream(byteStream);
-        return objectStream.readObject();
+        ObjectInputStream objectStream = null;
+        try {
+            objectStream = new ObjectInputStream(byteStream);
+            return objectStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return null;
     }
 }

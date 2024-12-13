@@ -18,47 +18,39 @@ public class BBDD {
         System.out.println("Incidencia guardada con código " + incidencias.size());
     }
 
-    // Función para realizar el hash de una contraseña usando SHA-256 (Codigo de la solución compartida del ejercicio 3)
-    public synchronized String hashContrasena(String contrasena) {
-        MessageDigest md = null;
-        try {
-            md = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = md.digest(contrasena.getBytes());
-
-            // Convertir el hash a una cadena hexadecimal
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hashBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            System.out.println("Error " + e.getMessage());
-            return null;
-        }
+    // Se guarda el usuario desde el hilo
+    public synchronized void guardarUsuario(Usuario usuario) {
+        usuarios.put(usuario.getUsuario(), usuario.getContrasena());
+        System.out.println("Un nuevo usuario ha sido registrado: " + usuario.getUsuario());
     }
 
-    // Función para registrar un nuevo usuario (Codigo de la solución compartida del ejercicio 3)
-    public synchronized boolean registrarUsuario(String nombreUsuario, String contrasena) {
-        // Hasheamos la contraseña antes de almacenarla
-        String contrasenaHasheada = hashContrasena(contrasena);
-        usuarios.put(nombreUsuario, contrasenaHasheada);
-        System.out.println("Un nuevo usuario ha sido registrado: " + nombreUsuario);
-
-        return usuarios.containsKey(nombreUsuario); // Devolvemos si se ha registrado o no el usuario
-    }
-
-    // Función para iniciar sesión verificando la contraseña (Codigo de la solución compartida del ejercicio 3)
-    public synchronized boolean iniciarSesion(String nombreUsuario, String contrasena) {
-        // Comprobamos si el usuario existe
-        if (usuarios.containsKey(nombreUsuario)) {
-            // Hasheamos la contrasena ingresada y la comparamos con la almacenada
-            String contrasenaHasheada = hashContrasena(contrasena);
-            //Accedemos a la informacion almacenada de ese usuario, es decir, el resumen de la contrasena
-            System.out.println(usuarios.get(nombreUsuario));
-            return contrasenaHasheada.equals(usuarios.get(nombreUsuario));
+    public boolean comprobarLogin(Usuario usuario) { // Para comprobar si el usuario y la contraseña es correcta
+        if (usuarios.containsKey(usuario.getUsuario())) {
+            // Hasheamos la contraseña ingresada y la comparamos con la almacenada
+            String contrasenaHasheada = getHash(usuario.getContrasena());
+            return contrasenaHasheada.equals(usuarios.get(usuario.getUsuario()));
         } else {
-            System.out.println("Usuario no encontrado.");
             return false;
         }
+    }
+
+    public static String getHash(String contrasena) {
+        MessageDigest md = null;
+        try {
+            // Usamos el algoritmo SHA-256 para hashea la contraseña
+            md = MessageDigest.getInstance("SHA-256");
+            byte[] contrasenaSegura = md.digest(contrasena.getBytes());
+
+            // Convertimos los bytes a hexadecimal para poder pasarlo a String
+            StringBuilder sb = new StringBuilder();
+            for (byte b : contrasenaSegura) {
+                sb.append(String.format("%02x", b));
+            }
+
+            return sb.toString(); // Lo pasamos a String para devolverlo
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("No se ha podido encontrar el SHA-256");
+        }
+        return null;
     }
 }

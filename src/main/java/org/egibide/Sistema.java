@@ -1,5 +1,7 @@
 package org.egibide;
 
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
@@ -11,8 +13,6 @@ public class Sistema {
         BBDD bbdd = new BBDD();
         int puerto = 6565;
 
-        bbdd.registrarUsuario("admin","admin"); // Para tener un usuario inicial
-
         // Uso del certificado en la parte del servidor
         System.setProperty("javax.net.ssl.keyStore", "src/main/java/org/egibide/Certificado/CertificadoSSL.jks");
         System.setProperty("javax.net.ssl.keyStorePassword", "12345Abcde");
@@ -21,7 +21,7 @@ public class Sistema {
         try {
             servidorSSL = (SSLServerSocket) sfact.createServerSocket(puerto);
 
-            // Creacion de clave publica y privada para la conversacion cifrada con los empleados. Se crean una vez en el servidor y se pasan a todos los hilos
+            // Creacion de clave publica y privada para el cifrado asimetrico
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
             KeyPair par = keyGen.generateKeyPair();
             PrivateKey clavepriv = par.getPrivate();
@@ -41,7 +41,7 @@ public class Sistema {
                 }
             }
         } catch (IOException e) {
-            System.out.println("Error al crear el servidor: " +e.getMessage());
+            System.out.println("Error al crear el servidor: " + e.getMessage());
         } catch (NoSuchAlgorithmException e) {
             System.out.println("Error al crear claves");
         }
