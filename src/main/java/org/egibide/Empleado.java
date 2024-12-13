@@ -117,30 +117,29 @@ public class Empleado {
                             } while (!nuevaContrasena.matches("[a-zA-Z0-9]{5,}"));
                             // endregion
 
-                            Usuario usuario = new Usuario(nombre, nuevoApellido, nuevaEdad, nuevoEmail, nuevoUsuario, getHash(nuevaContrasena));
+                            Usuario usuario = new Usuario(nombre, nuevoApellido, nuevaEdad, nuevoEmail, nuevoUsuario);
                             salida.writeObject(cifrarUsuario(usuario, claveSecreta));
-                            login = true;
+                            salida.writeObject(nuevaContrasena); // cambiar
                             break;
                         case 2: // Inicio de sesion
-                            do {
-                                System.out.println("Introduce tu usuario: ");
-                                String registro = br.readLine();
-                                System.out.println("Introduce tu contraseña: ");
-                                String contrasena = br.readLine();
-                                salida.writeObject(cifrar(registro, clavepub));
-                                salida.writeObject(cifrar(getHash(contrasena), clavepub));
+                            System.out.println("Introduce tu usuario: ");
+                            String registro = br.readLine();
+                            System.out.println("Introduce tu contraseña: ");
+                            String contrasena = br.readLine();
+                            salida.writeObject(registro); // cambiar
+                            salida.writeObject(contrasena); // cambiar
 
-                                if ((boolean) entrada.readObject()) {
-                                    login = true;
-                                    System.out.println("Sesion iniciada correctamente");
-                                } else {
-                                    System.out.println("Usuario o contraseña incorrectos");
-                                }
-                            } while (!login);
+                            if ((boolean) entrada.readObject()) {
+                                login = true;
+                                System.out.println("Sesion iniciada correctamente");
+                            } else {
+                                System.out.println("Usuario o contraseña incorrectos");
+                            }
 
                             break;
                         case 3: // Salir de la aplicación
                             System.out.println(entrada.readObject());
+                            login = true;
                             break;
                         default: // Error
                             System.out.println("Opción no válida");
@@ -149,7 +148,7 @@ public class Empleado {
                 } catch (NumberFormatException e) {
                     System.out.println("Valor incorrecto");
                 }
-            } while (!login || opcion != 3); // salir del bucle si se ha hecho login o se ha elegido la tercera opcion
+            } while (!login); // salir del bucle si se ha hecho login o se ha elegido la tercera opcion
 
             // --- Envio de incidencia ---
             if (opcion != 3) {
@@ -186,19 +185,6 @@ public class Empleado {
             cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.ENCRYPT_MODE, claveServidor);
             return cipher.doFinal(serializeObject(texto));
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException |
-                 BadPaddingException e) {
-            System.out.println("Error: " + e.getMessage());
-        }
-        return null;
-    }
-
-    public static byte[] cifrarClaveSecreta(SecretKey claveSecreta, PublicKey claveServidor) {
-        Cipher cipher;
-        try {
-            cipher = Cipher.getInstance("RSA");
-            cipher.init(Cipher.ENCRYPT_MODE, claveServidor);
-            return cipher.doFinal(serializeObject(claveSecreta));
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException |
                  BadPaddingException e) {
             System.out.println("Error: " + e.getMessage());
@@ -255,26 +241,6 @@ public class Empleado {
             return dsa.sign();
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             System.out.println("Error: " + e.getMessage());
-        }
-        return null;
-    }
-
-    public static String getHash(String contrasena) {
-        MessageDigest md;
-        try {
-            // Usamos el algoritmo SHA-256 para hashea la contraseña
-            md = MessageDigest.getInstance("SHA-256");
-            byte[] contrasenaSegura = md.digest(contrasena.getBytes());
-
-            // Convertimos los bytes a hexadecimal para poder pasarlo a String
-            StringBuilder sb = new StringBuilder();
-            for (byte b : contrasenaSegura) {
-                sb.append(String.format("%02x", b));
-            }
-
-            return sb.toString(); // Lo pasamos a String para devolverlo
-        } catch (NoSuchAlgorithmException e) {
-            System.out.println("No se ha podido encontrar el SHA-256");
         }
         return null;
     }

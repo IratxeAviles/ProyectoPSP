@@ -19,16 +19,17 @@ public class BBDD {
     }
 
     // Se guarda el usuario desde el hilo
-    public synchronized void guardarUsuario(Usuario usuario) {
-        usuarios.put(usuario.getUsuario(), usuario.getContrasena());
+    public synchronized void guardarUsuario(Usuario usuario, String contrasena) {
+        String contrasenaHasheada = getHash(contrasena);
+        usuarios.put(usuario.getUsuario(), contrasenaHasheada);
         System.out.println("Un nuevo usuario ha sido registrado: " + usuario.getUsuario());
     }
 
-    public boolean comprobarLogin(Usuario usuario) { // Para comprobar si el usuario y la contraseña es correcta
-        if (usuarios.containsKey(usuario.getUsuario())) {
+    public boolean comprobarLogin(String usuario, String contrasena) { // Para comprobar si el usuario y la contraseña es correcta
+        if (usuarios.containsKey(usuario)) {
             // Hasheamos la contraseña ingresada y la comparamos con la almacenada
-            String contrasenaHasheada = getHash(usuario.getContrasena());
-            return contrasenaHasheada.equals(usuarios.get(usuario.getUsuario()));
+            String contrasenaHasheada = getHash(contrasena);
+            return contrasenaHasheada.equals(usuarios.get(usuario));
         } else {
             return false;
         }

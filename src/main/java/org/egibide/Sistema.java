@@ -37,7 +37,7 @@ public class Sistema {
                     Hilo empleado = new Hilo(empleadoConectado, clavepub, clavepriv, bbdd);
                     empleado.start();
                 } catch (IOException e) {
-                    System.out.println("Error al conectar el empleado");
+                    System.out.println("Error: " + e.getMessage());
                 }
             }
         } catch (IOException e) {

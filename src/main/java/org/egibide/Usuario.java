@@ -10,13 +10,12 @@ public class Usuario implements Serializable {
     private String Usuario;
     private String contrasena;
 
-    public Usuario(String nombre, String apellido, int edad, String email, String usuario, String contrasena) {
+    public Usuario(String nombre, String apellido, int edad, String email, String usuario) {
         this.nombre = nombre;
         this.apellido = apellido;
         this.edad = edad;
         this.email = email;
         Usuario = usuario;
-        this.contrasena = contrasena;
     }
 
     public String getNombre() {
